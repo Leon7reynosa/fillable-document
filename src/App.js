@@ -1,43 +1,45 @@
-import React, { useState } from 'react';
-import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
+import React, { useState, useEffect } from 'react';
+import { PDFDocument } from 'pdf-lib';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfFile from './resources/edesur_t2_t3.pdf';
 import './App.css';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 function App() {
   const [pdfUrl, setPdfUrl] = useState(null);
 
-  const createPdf = async () => {
-    const urlPdf = 'https://pdf-lib.js.org/assets/with_update_sections.pdf'
-    const existingPdfBytes = await fetch(urlPdf).then(res => res.arrayBuffer())
-  
+  useEffect(() => {
+    setPdfUrl(pdfFile);
+  }, []);
+
+  const savePdf = async () => {
+    const existingPdfBytes = await fetch(pdfFile).then(res => res.arrayBuffer())
     const pdfDoc = await PDFDocument.load(existingPdfBytes)
 
-    const pages = pdfDoc.getPages()
-    const firstPage = pages[0]
-    
-
-    const page = firstPage
-  
     const form = pdfDoc.getForm()
-  
-    page.drawText('Enter your favorite superhero:', { x: 50, y: 700, size: 20 })
-  
-    const superheroField = form.createTextField('favorite.superhero')
-    superheroField.setText('')
-    superheroField.addToPage(page, { x: 50, y: 640, width: 150, height: 20 })
+    form.flatten()
+    //pdfDoc.setModified(false)
 
-    const pdfBytes = await pdfDoc.save()
-
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    setPdfUrl(url);
+    const pdfBytes = await pdfDoc.save({ useObjectStreams: false })
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'filled_document.pdf';
+    link.click();
   };
 
   return (
     <div className="App">
       <header className="App-header">
-        <button onClick={createPdf}>Create PDF</button>
         {pdfUrl && (
-          <iframe src={pdfUrl} width="100%" height="500px" title="Generated PDF" />
+          <>
+            <iframe src={`${pdfUrl}#toolbar=0&navpanes=0`} width="100%" height="500px" title="Editable PDF" />
+            <button onClick={savePdf}>Save and Flatten PDF</button>
+          </>
         )}
       </header>
     </div>
